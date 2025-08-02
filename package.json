@@ -1,0 +1,26 @@
+{
+  "name": "minecraft-server-manager",
+  "version": "1.0.0",
+  "description": "Discord bot for managing Minecraft servers",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "lint": "eslint . --ext .ts",
+    "format": "prettier --write \"src/**/*.ts\""
+  },
+  "dependencies": {
+    "discord.js": "^14.11.0",
+    "typescript": "^5.0.4",
+    "@types/node": "^20.2.5",
+    "ts-node": "^10.9.1",
+    "dotenv": "^16.0.3"
+  },
+  "devDependencies": {
+    "@typescript-eslint/parser": "^5.59.7",
+    "@typescript-eslint/eslint-plugin": "^5.59.7",
+    "eslint": "^8.41.0",
+    "prettier": "^2.8.8"
+  }
+}
