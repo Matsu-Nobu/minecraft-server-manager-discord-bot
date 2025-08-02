@@ -1,142 +1,146 @@
-import { SlashCommandBuilder } from '@discordjs/builders';
 import { CommandInteraction } from 'discord.js';
 import { MinecraftServerManager } from '../minecraft/server-manager';
-import dotenv from 'dotenv';
+import { readFile } from 'fs/promises';
 
-dotenv.config();
+async function loadPrivateKey(): Promise<string> {
+  const keyPath = process.env.MINECRAFT_SSH_PRIVATE_KEY_PATH;
+  if (!keyPath) {
+    throw new Error('MINECRAFT_SSH_PRIVATE_KEY_PATH is not set in environment variables');
+  }
+  return readFile(keyPath, 'utf-8');
+}
 
-const serverManager = new MinecraftServerManager({
-  host: process.env.MINECRAFT_RCON_HOST || 'localhost',
-  port: parseInt(process.env.MINECRAFT_RCON_PORT || '25575'),
-  password: process.env.MINECRAFT_RCON_PASSWORD || '',
-});
+async function initializeServerManager() {
+  const privateKey = await loadPrivateKey();
+  return new MinecraftServerManager({
+    host: process.env.MINECRAFT_RCON_HOST || 'localhost',
+    port: parseInt(process.env.MINECRAFT_RCON_PORT || '25575'),
+    password: process.env.MINECRAFT_RCON_PASSWORD || '',
+    ssh: {
+      host: process.env.MINECRAFT_SSH_HOST || 'localhost',
+      port: parseInt(process.env.MINECRAFT_SSH_PORT || '22'),
+      username: process.env.MINECRAFT_SSH_USERNAME || '',
+      privateKey
+    },
+    logPath: process.env.MINECRAFT_LOG_PATH || ''
+  });
+}
 
-const command = new SlashCommandBuilder()
-  .setName('mc')
-  .setDescription('Minecraft server commands')
-  .addSubcommandGroup(group =>
-    group
-      .setName('server')
-      .setDescription('Server management commands')
-      .addSubcommand(subcommand =>
-        subcommand
-          .setName('list')
-          .setDescription('List online players')
-      )
-      .addSubcommand(subcommand =>
-        subcommand
-          .setName('say')
-          .setDescription('Broadcast a message to the server')
-          .addStringOption(option =>
-            option
-              .setName('message')
-              .setDescription('The message to broadcast')
-              .setRequired(true)
-          )
-      )
-  )
-  .addSubcommandGroup(group =>
-    group
-      .setName('world')
-      .setDescription('World management commands')
-      .addSubcommand(subcommand =>
-        subcommand
-          .setName('time')
-          .setDescription('Set the time')
-          .addStringOption(option =>
-            option
-              .setName('value')
-              .setDescription('Time value')
-              .setRequired(true)
-              .addChoices(
-                { name: 'Day', value: 'day' },
-                { name: 'Night', value: 'night' }
-              )
-          )
-      )
-      .addSubcommand(subcommand =>
-        subcommand
-          .setName('weather')
-          .setDescription('Set the weather')
-          .addStringOption(option =>
-            option
-              .setName('type')
-              .setDescription('Weather type')
-              .setRequired(true)
-              .addChoices(
-                { name: 'Clear', value: 'clear' },
-                { name: 'Rain', value: 'rain' },
-                { name: 'Thunder', value: 'thunder' }
-              )
-          )
-      )
-  );
+// Export serverManager so it can be used by other modules
+export let serverManager: MinecraftServerManager;
 
-export const commands = [command.toJSON()];
+// Initialize the server manager
+export async function initServerManager(): Promise<MinecraftServerManager> {
+  if (!serverManager) {
+    serverManager = await initializeServerManager();
+    await serverManager.connect();
+  }
+  return serverManager;
+}
 
-export async function handleCommand(interaction: CommandInteraction) {
+export const commands = [
+  {
+    name: 'mc',
+    description: 'Minecraft server commands',
+    options: [
+      {
+        name: 'list',
+        description: 'List online players',
+        type: 1,
+      },
+      {
+        name: 'time',
+        description: 'Set time',
+        type: 1,
+        options: [
+          {
+            name: 'value',
+            description: 'Time to set',
+            type: 3,
+            required: true,
+            choices: [
+              {
+                name: 'day',
+                value: 'day'
+              },
+              {
+                name: 'night',
+                value: 'night'
+              }
+            ]
+          }
+        ]
+      },
+      {
+        name: 'weather',
+        description: 'Set weather',
+        type: 1,
+        options: [
+          {
+            name: 'value',
+            description: 'Weather to set',
+            type: 3,
+            required: true,
+            choices: [
+              {
+                name: 'clear',
+                value: 'clear'
+              },
+              {
+                name: 'rain',
+                value: 'rain'
+              },
+              {
+                name: 'thunder',
+                value: 'thunder'
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+];
+
+export async function handleCommand(interaction: CommandInteraction): Promise<void> {
   if (!interaction.isChatInputCommand()) return;
 
-  const group = interaction.options.getSubcommandGroup();
-  const subcommand = interaction.options.getSubcommand();
-
-  // 最初にdeferReply
-  await interaction.deferReply({ ephemeral: true });
-
   try {
-    // RCON接続確認
+    if (!serverManager) {
+      serverManager = await initializeServerManager();
+    }
+
+    // Ensure connection to Minecraft server
     if (!serverManager.connected) {
       await serverManager.connect();
     }
 
+    const subcommand = interaction.options.getSubcommand();
     let response: string;
-    let content = '❌ Unknown command';  // デフォルト値を設定
-    
-    switch (group) {
-      case 'server':
-        switch (subcommand) {
-          case 'list':
-            response = await serverManager.listPlayers();
-            content = `👥 **Online Players**\n${response}`;
-            break;
 
-          case 'say':
-            const message = interaction.options.getString('message', true);
-            response = await serverManager.broadcastMessage(message);
-            content = `📢 **Message sent to server**\n${response}`;
-            break;
-        }
+    switch (subcommand) {
+      case 'list':
+        response = await serverManager.listPlayers();
         break;
-
-      case 'world':
-        switch (subcommand) {
-          case 'time':
-            const time = interaction.options.getString('value', true) as 'day' | 'night';
-            response = await serverManager.setTime(time);
-            const timeEmoji = time === 'day' ? '☀️' : '🌙';
-            content = `${timeEmoji} **Time changed**\n${response}`;
-            break;
-
-          case 'weather':
-            const weather = interaction.options.getString('type', true) as 'clear' | 'rain' | 'thunder';
-            response = await serverManager.setWeather(weather);
-            const weatherEmoji = {
-              clear: '☀️',
-              rain: '🌧️',
-              thunder: '⛈️'
-            }[weather];
-            content = `${weatherEmoji} **Weather changed**\n${response}`;
-            break;
-        }
+      case 'time': {
+        const time = interaction.options.getString('value', true) as 'day' | 'night';
+        response = await serverManager.setTime(time);
         break;
+      }
+      case 'weather': {
+        const weather = interaction.options.getString('value', true) as 'clear' | 'rain' | 'thunder';
+        response = await serverManager.setWeather(weather);
+        break;
+      }
+      default:
+        response = 'Unknown command';
     }
 
-    await interaction.editReply({ content });
+    await interaction.reply(response);
   } catch (error) {
-    console.error('Error executing Minecraft command:', error);
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    await interaction.editReply({
-      content: `❌ **Error**\n${errorMessage}`
-    });
+    console.error('Error handling command:', error);
+    if (!interaction.replied) {
+      await interaction.reply('Failed to execute command. Please try again later.');
+    }
   }
 }

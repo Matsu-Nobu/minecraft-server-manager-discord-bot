@@ -10,9 +10,11 @@
   },
   "dependencies": {
     "@types/config": "^3.3.5",
+    "@types/ssh2": "^1.15.5",
     "config": "^3.3.12",
     "discord.js": "^14.21.0",
-    "dotenv": "^16.6.1"
+    "dotenv": "^16.6.1",
+    "ssh2": "^1.16.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.20",
