@@ -3,11 +3,8 @@ import { MinecraftServerManager } from '../minecraft/server-manager';
 import { readFile } from 'fs/promises';
 
 async function loadPrivateKey(): Promise<string> {
-  const keyPath = process.env.MINECRAFT_SSH_PRIVATE_KEY_PATH;
-  if (!keyPath) {
-    throw new Error('MINECRAFT_SSH_PRIVATE_KEY_PATH is not set in environment variables');
-  }
-  return readFile(keyPath, 'utf-8');
+  // Always use fixed path in container
+  return readFile('/home/node/.ssh/id_ed25519', 'utf-8');
 }
 
 async function initializeServerManager() {

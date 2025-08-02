@@ -19,8 +19,17 @@ RUN mkdir -p node_modules && chown -R node:node .
 # Switch to non-root user
 USER node
 
+# Create .ssh directory and set permissions
+RUN mkdir -p /home/node/.ssh && chown -R node:node /home/node/.ssh && chmod 700 /home/node/.ssh
+
 # Copy package files
 COPY --chown=node:node package*.json ./
+
+# Set up SSH key directory with fixed path
+ENV SSH_KEY_PATH=/home/node/.ssh/id_ed25519
+RUN mkdir -p /home/node/.ssh && \
+    chown -R node:node /home/node/.ssh && \
+    chmod 700 /home/node/.ssh
 
 # Install dependencies
 RUN npm install

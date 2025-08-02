@@ -16,5 +16,5 @@ services:
       - MINECRAFT_SSH_PRIVATE_KEY_PATH=${MINECRAFT_SSH_PRIVATE_KEY_PATH}
       - MINECRAFT_LOG_PATH=${MINECRAFT_LOG_PATH}
     volumes:
-      - ./.ssh:/app/.ssh
+      - ${MINECRAFT_SSH_PRIVATE_KEY_PATH}:/home/node/.ssh/id_ed25519:ro
     restart: unless-stopped
