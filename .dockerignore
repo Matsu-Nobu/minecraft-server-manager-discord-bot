@@ -1,20 +1,28 @@
 # Dependencies
-node_modules/
+node_modules
 package-lock.json
 
-# Build output
-dist/
+# Git
+.git
+.gitignore
 
 # Environment variables
 .env
 
+# Build output
+dist
+
 # Logs
 *.log
-logs/
+logs
 
 # IDE
-.vscode/
-.idea/
+.vscode
+.idea
+
+# Docker
+.docker
+.dockerignore
 
 # OS
 .DS_Store

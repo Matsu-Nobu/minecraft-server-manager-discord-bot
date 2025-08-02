@@ -1,0 +1,12 @@
+{
+  "minecraft": {
+    "rcon": {
+      "host": "${CONFIG_MINECRAFT_RCON_HOST}",
+      "port": "${CONFIG_MINECRAFT_RCON_PORT}",
+      "password": "${CONFIG_MINECRAFT_RCON_PASSWORD}"
+    }
+  },
+  "discord": {
+    "token": "${CONFIG_DISCORD_TOKEN}"
+  }
+}

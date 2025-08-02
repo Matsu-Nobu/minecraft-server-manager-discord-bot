@@ -1,17 +1,15 @@
-version: '3.8'
-
 services:
   bot:
     build:
       context: .
       dockerfile: docker/bot/Dockerfile
     volumes:
-      - ./src:/app/src
-      - ./config:/app/config
-      - ./package.json:/app/package.json
-      - ./tsconfig.json:/app/tsconfig.json
-      - ./.env:/app/.env
+      - .:/app
+      - /app/node_modules
     environment:
       - NODE_ENV=development
+      - DISCORD_TOKEN=${DISCORD_TOKEN}
+      - MINECRAFT_RCON_HOST=${MINECRAFT_RCON_HOST}
+      - MINECRAFT_RCON_PORT=${MINECRAFT_RCON_PORT}
+      - MINECRAFT_RCON_PASSWORD=${MINECRAFT_RCON_PASSWORD}
     restart: unless-stopped
-    command: sh -c "npm install && npm run dev"

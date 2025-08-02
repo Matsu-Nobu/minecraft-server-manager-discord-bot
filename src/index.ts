@@ -1,4 +1,5 @@
-import { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder } from 'discord.js';
+import { Client, GatewayIntentBits, REST, Routes } from 'discord.js';
+import { commands, handleCommand } from './commands/minecraft';
 import dotenv from 'dotenv';
 
 // Load environment variables
@@ -12,33 +13,31 @@ const client = new Client({
   ]
 });
 
-// Define slash commands
-const commands = [
-  {
-    name: 'ping',
-    description: 'Replies with Pong!'
-  }
-];
+const token = process.env.DISCORD_TOKEN;
+if (!token) {
+  throw new Error('DISCORD_TOKEN is not set in environment variables');
+}
 
 // Register commands when bot is ready
 client.once('ready', async () => {
-  if (!client.user || !process.env.DISCORD_TOKEN) {
-    console.error('Missing bot user or token');
+  if (!client.user) {
+    console.error('Missing bot user');
     return;
   }
 
-  console.log(`Logged in as ${client.user.tag}!`);
-
   try {
-    const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
+    const rest = new REST().setToken(token);
+
     console.log('Started refreshing application (/) commands.');
 
-    const data = await rest.put(
+    // Register commands globally
+    await rest.put(
       Routes.applicationCommands(client.user.id),
       { body: commands }
     );
 
-    console.log('Successfully registered application commands:', data);
+    console.log('Successfully registered application commands.');
+    console.log(`Logged in as ${client.user.tag}!`);
   } catch (error) {
     console.error('Error registering slash commands:', error);
   }
@@ -48,14 +47,18 @@ client.once('ready', async () => {
 client.on('interactionCreate', async interaction => {
   if (!interaction.isCommand()) return;
 
-  if (interaction.commandName === 'ping') {
-    await interaction.reply('Pong! 🏓');
+  if (interaction.commandName === 'mc') {
+    await handleCommand(interaction);
   }
 });
 
+// Error handling
+client.on('error', (error) => {
+  console.error('Discord client error:', error);
+});
+
 // Login with token
-console.log('Attempting to log in to Discord...');
-client.login(process.env.DISCORD_TOKEN).catch(error => {
+client.login(token).catch((error) => {
   console.error('Error logging in to Discord:', error);
   process.exit(1);
 });
